@@ -1,0 +1,6 @@
+.idea/workspace.xml
+.idea/$CACHE_FILE$
+.idea/libraries/
+.idea/dataSources*
+jocap-reader.iml
+.nrepl-port
