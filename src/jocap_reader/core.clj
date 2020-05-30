@@ -27,12 +27,21 @@
          :TRACK]))
 
 
-(defn sorted-schema [filename]
-  (into (sorted-map)
-        (for [[table rows] (->> filename io/resource slurp edn/read-string)]
-          [table (with-meta (into (sorted-map) rows) (meta rows))])))
+(defn sorted-schema
+  "Sort maps and retain table metadata. Optionally adjust types from java.sql/Types."
+  ([schema] (sorted-schema schema nil))
+  ([schema type-map]
+   (into (sorted-map)
+         (for [[table rows] schema]
+           [table (with-meta
+                    (into (sorted-map)
+                          (if type-map
+                            (for [[column details] rows]
+                              [column (update details :type type-map)])
+                            rows))
+                    (meta rows))]))))
 
-(def schema (sorted-schema "jocap-schema.edn"))
+(def schema (-> "jocap-schema.edn" io/resource slurp edn/read-string sorted-schema))
 
 (defn define
   "Display schema for table +- field."
@@ -75,6 +84,7 @@
 
    In Jocap Data Dictionary:
    - NUMERIC have length up to 10: this appears to mean *characters* e.g. '-24.43' is 6
+     This would be most faithfully converted into DECIMAL but this isn't what ODBC did.
    - LONG are all 4 bytes, i.e. 32 bits
    - TIMESTAMP and DATE are all 8
    - CHARACTER are up to 100
@@ -100,7 +110,7 @@
    DBFDataType/CHARACTER Types/VARCHAR
    DBFDataType/DATE Types/DATE
    DBFDataType/TIMESTAMP Types/TIMESTAMP ; ref doesn't cover DBF ODBC for TIMESTAMP
-   DBFDataType/MEMO Types/LONGVARCHAR
+   DBFDataType/MEMO Types/LONGVARCHAR ; TODO are these coming across? does lib look for FPT file?
    DBFDataType/LOGICAL Types/BIT
    DBFDataType/LONG Types/INTEGER}) ; ref doesn't cover DBF ODBC for LONG
 
