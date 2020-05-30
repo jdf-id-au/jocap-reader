@@ -26,7 +26,47 @@
          :PATGG
          :TRACK]))
 
-(def schema (-> "jocap-schema.edn" io/resource slurp edn/read-string))
+
+(defn sorted-schema [filename]
+  (into (sorted-map)
+        (for [[table rows] (->> filename io/resource slurp edn/read-string)]
+          [table (with-meta (into (sorted-map) rows) (meta rows))])))
+
+(def schema (sorted-schema "jocap-schema.edn"))
+
+(defn define
+  "Display schema for table +- field."
+  ([table] (define table nil))
+  ([table field] (merge {:table (-> (get schema table) meta :title)}
+                        (if field {:field (get-in schema [table field])}))))
+
+(defn fields
+  "List field names and English definitions."
+  [table]
+  (into (sorted-map) (for [[field {:keys [name unit storage comment]}] (get schema table)]
+                       [field (when name (str name (when unit (str " (" unit ")"))))])))
+
+#_ (define :A_PAT :PAT_NR)
+
+(def units ; TODO might be useful later during parsing; might not reflect reality so don't change schema
+  {"%" "%"
+   "10^9/l" "/nL"
+   "g/dl" "g/dL"
+   "h" "h"
+   "kPa" "kPa"
+   "l" "L"
+   "l/min" "L/min"
+   "lpm" "L/min"
+   "lpm/m²" "L/min/m^2"
+   "mbar" "mbar"
+   "meq/l" "mEq/L"
+   "min" "min"
+   "ml" "mL"
+   "ml/min" "mL/min"
+   "mlpm" "mL/min"
+   "mmHg" "mmHg"
+   "mmol/l" "mmol/L"
+   "°C" "°C"})
 
 (def types
   "Map DBFDataType to java.sql.Types guided by Microsoft ODBC behaviour:
@@ -63,6 +103,8 @@
    DBFDataType/MEMO Types/LONGVARCHAR
    DBFDataType/LOGICAL Types/BIT
    DBFDataType/LONG Types/INTEGER}) ; ref doesn't cover DBF ODBC for LONG
+
+(defn open-dbf [file] (DBFReader. (io/input-stream file)))
 
 (defn dbf-row-seq
   "Lazy-load whole table. Make DATE and TIMESTAMP local."
