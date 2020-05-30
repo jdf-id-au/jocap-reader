@@ -1,9 +1,14 @@
 (ns jocap-reader.core
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [tick.core :as t])
+            [tick.core :as t]
+            [clojure.string :as s]
+            [comfort.core :as c])
   (:import (com.linuxense.javadbf DBFDataType DBFReader)
-           (java.sql Types)))
+           (java.sql Types)
+           (java.io File)))
+
+(def namer (comp keyword s/upper-case))
 
 (def target-tables
   (into (sorted-set)
@@ -25,7 +30,6 @@
          :A_PERF
          :PATGG
          :TRACK]))
-
 
 (defn sorted-schema
   "Sort maps and retain table metadata. Optionally adjust types from java.sql/Types."
@@ -114,7 +118,14 @@
    DBFDataType/LOGICAL Types/BIT
    DBFDataType/LONG Types/INTEGER}) ; ref doesn't cover DBF ODBC for LONG
 
-(defn open-dbf [file] (DBFReader. (io/input-stream file)))
+(defn open-dbf
+  "Opens dbf file and associated fpt (which contains MEMO data) if it exists."
+  [^File file]
+  (let [name (.getName file)
+        stem (namer (subs name 0 (s/last-index-of name \.)))
+        fpt (->> file .getCanonicalFile .getParent (c/ext namer "fpt") stem)
+        r (DBFReader. (io/input-stream file))]
+    (if fpt (.setMemoFile ^DBFReader r fpt) r)))
 
 (defn dbf-row-seq
   "Lazy-load whole table. Make DATE and TIMESTAMP local."

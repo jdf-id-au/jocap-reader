@@ -51,7 +51,7 @@
 
 #_ (def data-root "")
 
-#_ (def tables (c/ext "dbf" (comp keyword s/upper-case) data-root))
+#_ (def tables (c/ext "dbf" j/namer data-root))
 
 #_ (def extra-columns
      "Which columns appear in the dbf but not the schema?"
