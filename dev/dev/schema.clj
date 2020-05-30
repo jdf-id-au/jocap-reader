@@ -15,41 +15,6 @@
 (defn dd-tables [dd]
   (s/split dd #"Table "))
 
-(def types
-  "Map DBFDataType to java.sql.Types guided by Microsoft ODBC behaviour:
-    https://docs.microsoft.com/en-us/sql/odbc/microsoft/dbase-data-types
-    https://docs.microsoft.com/en-us/sql/odbc/microsoft/microsoft-access-data-types
-
-   In Jocap Data Dictionary:
-   - NUMERIC have length up to 10: this appears to mean *characters* e.g. '-24.43' is 6
-   - LONG are all 4 bytes, i.e. 32 bits
-   - TIMESTAMP and DATE are all 8
-   - CHARACTER are up to 100
-   - LOGICAL are all 1
-   - MEMO has 12 instances, up to 64KB, refers to accompanying .fpt file
-
-   In Access 2013 (Access -> ODBC names):
-   - Number can be
-    1 (Byte -> TINYINT), 2 (Integer -> SMALLINT), 4 (Long Integer -> INTEGER)
-    4 (Single -> REAL), 8 (Double -> DOUBLE)
-    12 (Decimal -> DECIMAL)
-    [16 (Replication ID -> GUID) - Access 4.0 only]
-    [? (Numeric -> NUMERIC) - Access 4.0 only]
-    [8 (Large Number -> BIGINT) - Access >=2016]
-   - Date/Time are 8
-   - Short Text (formerly Text) are up to 255 characters [sic]
-   - Yes/No are 1
-   - Long Text (formerly Memo) are up to ~1GB
-    https://support.office.com/en-us/article/set-the-field-size-ba65e5a7-2e6f-4737-8e72-36b93f966a33
-    https://support.office.com/en-us/article/data-types-for-access-desktop-databases-df2b83ba-cef6-436d-b679-3418f622e482
-   "
-  {DBFDataType/NUMERIC Types/DOUBLE
-   DBFDataType/CHARACTER Types/VARCHAR
-   DBFDataType/DATE Types/DATE
-   DBFDataType/TIMESTAMP Types/TIMESTAMP ; ref doesn't cover DBF ODBC for TIMESTAMP
-   DBFDataType/MEMO Types/LONGVARCHAR
-   DBFDataType/LOGICAL Types/BIT
-   DBFDataType/LONG Types/INTEGER}) ; ref doesn't cover DBF ODBC for LONG
 
 (defn dd-schema [dd-table]
   (let [[header & body] (s/split-lines dd-table)
@@ -63,7 +28,7 @@
          (for [[_ variable definition type length decimals]
                (re-seq #" ([A-Z0-9_]*) (.*?) ([NCDTIML])\s+(\d+)\s+(\d+)" body)]
            [(keyword variable) (cond-> {:name definition
-                                        :type (-> ^char (first type) DBFDataType/fromCode types)
+                                        :type (-> ^char (first type) DBFDataType/fromCode j/types)
                                         :length (Integer/parseInt length)
                                         :decimals (Integer/parseInt decimals)}
                                  (= variable "PRIM_KEY") (assoc :pk true))]))
@@ -82,7 +47,7 @@
             (for [field (map #(.getField dbfr %) (range (.getFieldCount dbfr)))
                   :let [colname (.getName field)
                         coltype (.getType field)]]
-              [(keyword colname) {:type (get types coltype)}]))))
+              [(keyword colname) {:type (get j/types coltype)}]))))
 
 #_ (def data-root "")
 
