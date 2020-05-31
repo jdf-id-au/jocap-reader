@@ -125,7 +125,8 @@
         stem (namer (subs name 0 (s/last-index-of name \.)))
         fpt (->> file .getCanonicalFile .getParent (c/ext "fpt" namer) stem)
         r (DBFReader. (io/input-stream file))]
-    (if fpt (.setMemoFile ^DBFReader r fpt) r)))
+    (if fpt (.setMemoFile ^DBFReader r fpt))
+    r))
 
 (defn unless-nulls
   "Return memo as string unless it's all nulls."
