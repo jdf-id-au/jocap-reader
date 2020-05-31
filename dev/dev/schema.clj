@@ -5,8 +5,7 @@
             [comfort.core :as c])
   (:import (org.apache.pdfbox.pdmodel PDDocument)
            (org.apache.pdfbox.text PDFTextStripper)
-           (com.linuxense.javadbf DBFDataType DBFReader)
-           (java.sql Types)))
+           (com.linuxense.javadbf DBFDataType DBFReader)))
 
 (defn get-dd [filename]
   (with-open [pdf (->> filename io/resource io/file PDDocument/load)]
@@ -14,7 +13,6 @@
 
 (defn dd-tables [dd]
   (s/split dd #"Table "))
-
 
 (defn dd-schema [dd-table]
   (let [[header & body] (s/split-lines dd-table)

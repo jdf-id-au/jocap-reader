@@ -125,8 +125,14 @@
         stem (namer (subs name 0 (s/last-index-of name \.)))
         fpt (->> file .getCanonicalFile .getParent (c/ext "fpt" namer) stem)
         r (DBFReader. (io/input-stream file))]
-    (if fpt (.setMemoFile ^DBFReader r fpt))
+    (if fpt (.setMemoFile r fpt))
     r))
+
+(defn open-table
+  "Open table in path, e.g. (open-table \"/path/to/dbfs\" :A_PAT).
+   Caller's responsibility to close."
+  [path table-key]
+  (->> path (c/ext "dbf" namer) table-key open-dbf))
 
 (defn unless-nulls
   "Return memo as string unless it's all nulls."
@@ -153,3 +159,34 @@
                               (cons (interpret row) (continue reader))
                               (.close reader))))] ; .close returns nil
     (extract dbfr)))
+
+(defn find-cases
+  "Find cases according to criteria."
+  [field & args]
+  ; TODO use core.match opportunity
+  ; TODO combine with and
+  #_ [[:procnum :starts-with 2020]
+      [:procnum :between 20190000 20199999] ; inclusive to reduce surprise
+      [:dob 1950 1 1]
+      [:dop 2019 3 5]
+      [:dop :between 2019 3 4 2019 7 4]
+      [:mrn 323488]]
+  ; translate
+  #_ {:procnum :PAT_NR ; string
+      :mrn :PAT_ID ; string
+      :dop :OP_DATUM
+      :dob :GEB_DAT
+      :surname :NACHNAME
+      :given :VORNAME})
+
+
+(defn extract-case
+  "Eagerly load case from all tables."
+  ; Unfortunately javadbf can't read CDX index files and I'm not going to implement it.
+  [path procnum]
+  (into (sorted-map)
+    (for [[table-key file] (select-keys (c/ext "dbf" namer path) target-tables)]
+      [table-key
+       (with-open [table (open-dbf file)]
+         (into []
+           (->> (dbf-row-seq table))))])))
