@@ -123,7 +123,7 @@
   [^File file]
   (let [name (.getName file)
         stem (namer (subs name 0 (s/last-index-of name \.)))
-        fpt (->> file .getCanonicalFile .getParent (c/ext namer "fpt") stem)
+        fpt (->> file .getCanonicalFile .getParent (c/ext "fpt" namer) stem)
         r (DBFReader. (io/input-stream file))]
     (if fpt (.setMemoFile ^DBFReader r fpt) r)))
 

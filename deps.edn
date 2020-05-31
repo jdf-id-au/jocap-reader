@@ -2,7 +2,7 @@
  :deps {org.clojure/clojure {:mvn/version "1.10.1"}
         com.github.albfernandez/javadbf {:mvn/version "1.11.0"}
         jdf/comfort {:git/url "https://github.com/jdf-id-au/comfort.git"
-                     :sha "7ced298bb62afe3d7ff8a0c172da5508b8d1c735"}
+                     :sha "adb6c673d412c78f4528212204f5309a535c7d25"}
         tick {:git/url "https://github.com/juxt/tick.git"
               :sha "1e14333e3ce142dd3eebb0cca9449a980a924f1e"}} ; 20200207
  :aliases
