@@ -127,6 +127,11 @@
         r (DBFReader. (io/input-stream file))]
     (if fpt (.setMemoFile ^DBFReader r fpt) r)))
 
+(defn unless-nulls
+  "Return memo as string unless it's all nulls."
+  [memo]
+  (if-not (every? (comp zero? int) memo) memo))
+
 (defn dbf-row-seq
   "Lazy-load whole table. Make DATE and TIMESTAMP local."
   [^DBFReader dbfr]
@@ -135,6 +140,7 @@
         interpreters (map (fn [field] (condp = (.getType field) ; case needs compile-time literals!
                                         DBFDataType/DATE t/date
                                         DBFDataType/TIMESTAMP t/date-time
+                                        DBFDataType/MEMO unless-nulls
                                         ;DBFDataType/TIMESTAMP_DBASE7 t/date-time
                                         identity))
                           fields)
