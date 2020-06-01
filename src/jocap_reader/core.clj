@@ -3,10 +3,12 @@
             [clojure.edn :as edn]
             [tick.core :as t]
             [clojure.string :as s]
-            [comfort.core :as c])
+            [comfort.core :as c]
+            [clojure.core.match :refer [match]])
   (:import (com.linuxense.javadbf DBFDataType DBFReader)
            (java.sql Types)
-           (java.io File)))
+           (java.io File)
+           (java.time LocalDate)))
 
 (def namer (comp keyword s/upper-case))
 
@@ -160,17 +162,37 @@
                               (.close reader))))] ; .close returns nil
     (extract dbfr)))
 
-(defn find-cases
-  "Find cases according to criteria."
-  [field & args]
-  ; TODO use core.match opportunity
-  ; TODO combine with and
-  #_ [[:procnum :starts-with 2020]
-      [:procnum :between 20190000 20199999] ; inclusive to reduce surprise
-      [:dob 1950 1 1]
-      [:dop 2019 3 5]
-      [:dop :between 2019 3 4 2019 7 4]
-      [:mrn 323488]]
+(defmulti between? "Polymorphic bound-inclusive."
+  ; Not protocol because "If you don’t own [the protocol or] the target type, you should only extend in app (not public lib) code, and expect to maybe be broken by either owner."
+  (fn [x start end] (class x))) ; dispatch via isa?
+(defmethod between? Number [x start end] (<= start x end))
+(defmethod between? LocalDate [x start end] (and (t/<= start x) (t/<= x end)))
+
+(defn case-filter
+  "Return case filter which requires all listed conditions (from A_PAT).
+   e.g. (case-filter [:surname \"Smith\"] [:dop 2020 4 3 - 2020 6 4])."
+  [& conditions]
+  (apply every-pred
+    (for [condition conditions]
+      (match [condition]
+        ; TODO fns may need some refactoring
+        ; int, could use :guard; ok to use * symbol etc because macro
+        [[:procnum procnum]] #(some-> % :PAT_NR Integer/parseInt (= procnum))
+        [[:procnum starts-with *]] #(some-> % :PAT_NR (s/starts-with? (str starts-with)))
+        ; inclusive to reduce surprise
+        [[:procnum from to]] #(some-> % :PAT_NR Integer/parseInt (between? from to))
+        ; date
+        [[:dob dob]] #(some-> % :GEB_DAT (= dob))
+        [[:dob y m d]] #(some-> % :GEB_DAT (= (t/new-date y m d)))
+        [[:dop dop]] #(some-> % :OP_DATUM (= dop))
+        [[:dop y m d]] #(some-> % :OP_DATUM (= (t/new-date y m d)))
+        [[:dop from to]] #(some-> % :OP_DATUM (between? from to))
+        [[:dop y1 m1 d1 - y2 m2 d2]] #(some-> % :OP_DATUM (between? (t/new-date y1 m1 d1)
+                                                                    (t/new-date y2 m2 d2)))
+        ; int
+        [[:mrn mrn]] #(some-> % :PAT_NR Integer/parseInt (= mrn))
+        ; string, ideally soft matching
+        [[:name surname]] #(some-> % :NACHNAME (= surname)))))
   ; translate
   #_ {:procnum :PAT_NR ; string
       :mrn :PAT_ID ; string
@@ -178,7 +200,6 @@
       :dob :GEB_DAT
       :surname :NACHNAME
       :given :VORNAME})
-
 
 (defn extract-case
   "Eagerly load case from all tables."
