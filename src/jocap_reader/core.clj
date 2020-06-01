@@ -168,38 +168,39 @@
 (defmethod between? Number [x start end] (<= start x end))
 (defmethod between? LocalDate [x start end] (and (t/<= start x) (t/<= x end)))
 
+(defn try-int [s]
+  (try (Integer/parseInt s)
+       (catch NumberFormatException e #_(println (.getMessage e)))))
+
+(defn string-match
+  "Case-insensitive match. Ideally would be soft match."
+  [x y]
+  (= (s/lower-case x) (s/lower-case y)))
+
 (defn case-filter
-  "Return case filter which requires all listed conditions (from A_PAT).
+  "Return case filter which requires all listed conditions (most require A_PAT table).
    e.g. (case-filter [:surname \"Smith\"] [:dop 2020 4 3 - 2020 6 4])."
   [& conditions]
   (apply every-pred
     (for [condition conditions]
       (match [condition]
-        ; TODO fns may need some refactoring
-        ; int, could use :guard; ok to use * symbol etc because macro
-        [[:procnum procnum]] #(some-> % :PAT_NR Integer/parseInt (= procnum))
+        ; ok to use * symbol etc because macro
+        [[:procnum procnum]] #(some-> % :PAT_NR try-int (= procnum))
         [[:procnum starts-with *]] #(some-> % :PAT_NR (s/starts-with? (str starts-with)))
         ; inclusive to reduce surprise
-        [[:procnum from to]] #(some-> % :PAT_NR Integer/parseInt (between? from to))
-        ; date
+        [[:procnum from - to]] #(some-> % :PAT_NR try-int (between? from to))
         [[:dob dob]] #(some-> % :GEB_DAT (= dob))
         [[:dob y m d]] #(some-> % :GEB_DAT (= (t/new-date y m d)))
         [[:dop dop]] #(some-> % :OP_DATUM (= dop))
         [[:dop y m d]] #(some-> % :OP_DATUM (= (t/new-date y m d)))
-        [[:dop from to]] #(some-> % :OP_DATUM (between? from to))
+        [[:dop from - to]] #(some-> % :OP_DATUM (between? from to))
         [[:dop y1 m1 d1 - y2 m2 d2]] #(some-> % :OP_DATUM (between? (t/new-date y1 m1 d1)
                                                                     (t/new-date y2 m2 d2)))
-        ; int
-        [[:mrn mrn]] #(some-> % :PAT_NR Integer/parseInt (= mrn))
-        ; string, ideally soft matching
-        [[:name surname]] #(some-> % :NACHNAME (= surname)))))
-  ; translate
-  #_ {:procnum :PAT_NR ; string
-      :mrn :PAT_ID ; string
-      :dop :OP_DATUM
-      :dob :GEB_DAT
-      :surname :NACHNAME
-      :given :VORNAME})
+        [[:mrn mrn]] #(some-> % :PAT_ID try-int (= mrn))
+        [[:surname surname]] #(some-> % :NACHNAME (string-match surname))
+        [[:surgeon surname]] #(some-> % :OPERATEUR (s/includes? surname))
+        [[:anaesthetist surname]] #(some-> % :ANAESTH1 (s/includes? surname))
+        [[:perfusionist surname]] #(some-> % :KARDIOT1 (s/includes? surname))))))
 
 (defn extract-case
   "Eagerly load case from all tables."
@@ -210,4 +211,4 @@
       [table-key
        (with-open [table (open-dbf file)]
          (into []
-           (->> (dbf-row-seq table))))])))
+           (->> table dbf-row-seq (filter (case-filter [:procnum procnum])))))])))
