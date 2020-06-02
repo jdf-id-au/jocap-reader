@@ -232,10 +232,19 @@
   [path & conditions]
   (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :TRACK))
         procnums (->> files :A_PAT open-dbf dbf-row-seq (filter (apply case-filter conditions))
-                      (map (comp try-int :PAT_NR)) set)]
+                      (map :PAT_NR) set)]
+    ; 8.5 minutes vs 7.3 for concat below! (unless matching string is worse than converting then matching int)
+    ; 5.6 when matching on int, might need to reconfirm
+    #_(apply concat
+        (for [[table-key file] files
+              :let [table (open-dbf file)]]
+          (remove nil?
+            (pmap (fn [{:keys [PAT_NR] :as row}]
+                    (if (contains? procnums PAT_NR) [table-key row]))
+                  (dbf-row-seq table)))))
     (concat
       (for [[table-key file] files
             :let [table (open-dbf file)]
             {:keys [PAT_NR] :as row} (dbf-row-seq table)
-            :when (contains? procnums (try-int PAT_NR))]
+            :when (contains? procnums PAT_NR)]
         [table-key row]))))
