@@ -2,4 +2,7 @@
   (:require [jocap-reader.core :as j]
             [comfort.core :as c]))
 
-#_(def a_pat (->> "path" (c/ext "dbf" namer) :A_PAT j/open-dbf j/dbf-row-seq doall))
+#_ (def lazy (extract-cases)
+            "path"
+            [:procnum 20171256])
+#_ (def done (time (doall lazy)))

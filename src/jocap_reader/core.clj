@@ -224,13 +224,18 @@
         [[:diagnosis diagnosis]] #(-> % (all-of :DIAGNOSE 6) (ci s/includes? diagnosis))
         [[:operation operation]] #(-> % (all-of :OP_ART 6) (ci s/includes? operation))))))
 
-(defn extract-case
-  "Eagerly load case from all tables."
+(defn extract-cases
+  "Lazily load rows from all tables pertaining to cases matching supplied filter of A_PAT table."
   ; Unfortunately javadbf can't read CDX index files and I'm not going to implement it.
-  [path procnum]
-  (into (sorted-map)
-    (for [[table-key file] (select-keys (c/ext "dbf" namer path) target-tables)]
-      [table-key
-       (with-open [table (open-dbf file)]
-         (into []
-           (->> table dbf-row-seq (filter (case-filter [:procnum procnum])))))])))
+  ; Probably no benefit from scanning multiple dbfs at once? Could determine empirically?
+  ; Relies on completed dbf-row-seq closing its file.
+  [path & conditions]
+  (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :TRACK))
+        procnums (->> files :A_PAT open-dbf dbf-row-seq (filter (apply case-filter conditions))
+                      (map (comp try-int :PAT_NR)) set)]
+    (concat
+      (for [[table-key file] files
+            :let [table (open-dbf file)]
+            {:keys [PAT_NR] :as row} (dbf-row-seq table)
+            :when (contains? procnums (try-int PAT_NR))]
+        [table-key row]))))
