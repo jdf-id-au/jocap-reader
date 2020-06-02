@@ -4,6 +4,7 @@
             [tick.core :as t]
             [clojure.string :as s]
             [comfort.core :as c]
+            [clj-fuzzy.levenshtein :as lev]
             [clojure.core.match :refer [match]])
   (:import (com.linuxense.javadbf DBFDataType DBFReader)
            (java.sql Types)
@@ -172,35 +173,54 @@
   (try (Integer/parseInt s)
        (catch NumberFormatException e #_(println (.getMessage e)))))
 
-(defn string-match
-  "Case-insensitive match. Ideally would be soft match."
+(defn ci
+  "Case-insensitive comparison using f. Idiosyncratic arg order to make thread macro tidier."
+  [x f y]
+  (f (s/lower-case x) (s/lower-case y)))
+
+(defn full-name
+  [{:keys [VORNAME NACHNAME]}]
+  (str VORNAME \space NACHNAME))
+
+(defn short-lev
   [x y]
-  (= (s/lower-case x) (s/lower-case y)))
+  (>= 2 (lev/distance x y)))
+
+(defn multi-field
+  "Return function to make a list of values from consecutively numbered fields. (like OP_ART)"
+  [prefix number]
+  (apply juxt (map #(keyword (str prefix \_ %)) (range 1 (inc number)))))
+
+(defn all-of
+  [row prefix number]
+  (apply str (interpose \newline (remove clojure.string/blank? ((multi-field prefix number) row)))))
 
 (defn case-filter
   "Return case filter which requires all listed conditions (most require A_PAT table).
-   e.g. (case-filter [:surname \"Smith\"] [:dop 2020 4 3 - 2020 6 4])."
+   e.g. (case-filter [:surname \"Smith\"] [:dop 2020 4 3 :to 2020 6 4])."
   [& conditions]
   (apply every-pred
     (for [condition conditions]
       (match [condition]
-        ; ok to use * symbol etc because macro
         [[:procnum procnum]] #(some-> % :PAT_NR try-int (= procnum))
-        [[:procnum starts-with *]] #(some-> % :PAT_NR (s/starts-with? (str starts-with)))
+        [[:procnum starts-with :all]] #(some-> % :PAT_NR (s/starts-with? (str starts-with)))
         ; inclusive to reduce surprise
-        [[:procnum from - to]] #(some-> % :PAT_NR try-int (between? from to))
+        [[:procnum from :to to]] #(some-> % :PAT_NR try-int (between? from to))
         [[:dob dob]] #(some-> % :GEB_DAT (= dob))
         [[:dob y m d]] #(some-> % :GEB_DAT (= (t/new-date y m d)))
         [[:dop dop]] #(some-> % :OP_DATUM (= dop))
         [[:dop y m d]] #(some-> % :OP_DATUM (= (t/new-date y m d)))
-        [[:dop from - to]] #(some-> % :OP_DATUM (between? from to))
-        [[:dop y1 m1 d1 - y2 m2 d2]] #(some-> % :OP_DATUM (between? (t/new-date y1 m1 d1)
-                                                                    (t/new-date y2 m2 d2)))
+        [[:dop from :to to]] #(some-> % :OP_DATUM (between? from to))
+        [[:dop y1 m1 d1 :to y2 m2 d2]] #(some-> % :OP_DATUM (between? (t/new-date y1 m1 d1)
+                                                                      (t/new-date y2 m2 d2)))
         [[:mrn mrn]] #(some-> % :PAT_ID try-int (= mrn))
-        [[:surname surname]] #(some-> % :NACHNAME (string-match surname))
-        [[:surgeon surname]] #(some-> % :OPERATEUR (s/includes? surname))
-        [[:anaesthetist surname]] #(some-> % :ANAESTH1 (s/includes? surname))
-        [[:perfusionist surname]] #(some-> % :KARDIOT1 (s/includes? surname))))))
+        [[:surname surname]] #(some-> % :NACHNAME (ci = surname))
+        [[:name name]] #(-> % full-name (ci short-lev name))
+        [[:surgeon surname]] #(some-> % :OPERATEUR (ci s/includes? surname))
+        [[:anaesthetist surname]] #(some-> % :ANAESTH1 (ci s/includes? surname))
+        [[:perfusionist surname]] #(some-> % :KARDIOT1 (ci s/includes? surname))
+        [[:diagnosis diagnosis]] #(-> % (all-of :DIAGNOSE 6) (ci s/includes? diagnosis))
+        [[:operation operation]] #(-> % (all-of :OP_ART 6) (ci s/includes? operation))))))
 
 (defn extract-case
   "Eagerly load case from all tables."

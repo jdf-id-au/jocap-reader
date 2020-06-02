@@ -3,9 +3,10 @@
         org.clojure/core.match {:mvn/version "1.0.0"}
         com.github.albfernandez/javadbf {:mvn/version "1.11.0"}
         jdf/comfort {:git/url "https://github.com/jdf-id-au/comfort.git"
-                     :sha "adb6c673d412c78f4528212204f5309a535c7d25"}
+                     :sha "4b2db894dae39f4e2dee3f6e7ebf96340e9b6deb"}
         tick {:git/url "https://github.com/juxt/tick.git"
-              :sha "1e14333e3ce142dd3eebb0cca9449a980a924f1e"}} ; 20200207
+              :sha "1e14333e3ce142dd3eebb0cca9449a980a924f1e"} ; 20200207
+        clj-fuzzy {:mvn/version "0.4.1"}}
  :aliases
  {:dev {:extra-paths ["dev"]
         :extra-deps {org.apache.pdfbox/pdfbox {:mvn/version "2.0.19"}}}}}
