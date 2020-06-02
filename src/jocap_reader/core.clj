@@ -189,14 +189,16 @@
 (defn multi-field
   "Return function to make a list of values from consecutively numbered fields. (like OP_ART)"
   [prefix number]
-  (apply juxt (map #(keyword (str prefix \_ %)) (range 1 (inc number)))))
+  (apply juxt (map #(keyword (str (name prefix) \_ %)) (range 1 (inc number)))))
 
 (defn all-of
   [row prefix number]
-  (apply str (interpose \newline (remove clojure.string/blank? ((multi-field prefix number) row)))))
+  (->> ((multi-field prefix number) row)
+       (remove s/blank?)
+       (s/join \newline)))
 
 (defn case-filter
-  "Return case filter which requires all listed conditions (most require A_PAT table).
+  "Return case filter which requires all listed conditions (most refer to A_PAT table).
    e.g. (case-filter [:surname \"Smith\"] [:dop 2020 4 3 :to 2020 6 4])."
   [& conditions]
   (apply every-pred
