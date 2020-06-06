@@ -117,7 +117,7 @@
    DBFDataType/CHARACTER Types/VARCHAR
    DBFDataType/DATE Types/DATE
    DBFDataType/TIMESTAMP Types/TIMESTAMP ; ref doesn't cover DBF ODBC for TIMESTAMP
-   DBFDataType/MEMO Types/LONGVARCHAR ; TODO are these coming across? does lib look for FPT file?
+   DBFDataType/MEMO Types/LONGVARCHAR
    DBFDataType/LOGICAL Types/BIT
    DBFDataType/LONG Types/INTEGER}) ; ref doesn't cover DBF ODBC for LONG
 
@@ -198,7 +198,8 @@
        (s/join \newline)))
 
 (defn case-filter
-  "Return case filter which requires all listed conditions (most refer to A_PAT table).
+  "Return case filter which requires all listed conditions.
+   All except :procnum refer to A_PAT table.
    e.g. (case-filter [:surname \"Smith\"] [:dop 2020 4 3 :to 2020 6 4])."
   [& conditions]
   (apply every-pred
@@ -224,15 +225,22 @@
         [[:diagnosis diagnosis]] #(-> % (all-of :DIAGNOSE 6) (ci s/includes? diagnosis))
         [[:operation operation]] #(-> % (all-of :OP_ART 6) (ci s/includes? operation))))))
 
-(defn extract-cases
-  "Lazily load rows from all tables pertaining to cases matching supplied filter of A_PAT table."
+(defn find-cases
+  "Lazily find cases at path matching conditions. Return matching A_PAT rows."
+  [path & conditions]
+  (some->> path (c/ext "dbf" namer) :A_PAT open-dbf dbf-row-seq
+           (filter (apply case-filter conditions))))
+
+(defn extract
+  "Lazily load rows from all tables pertaining to cases (A_PAT rows or int procnums) at path."
   ; Unfortunately javadbf can't read CDX index files and I'm not going to implement it.
   ; Probably no benefit from scanning multiple dbfs at once? Could determine empirically?
   ; Relies on completed dbf-row-seq closing its file.
-  [path & conditions]
+  [path cases]
   (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :TRACK))
-        procnums (->> files :A_PAT open-dbf dbf-row-seq (filter (apply case-filter conditions))
-                      (map (comp try-int :PAT_NR)) set)]
+        procnums (set (condp #(%1 %2) (first cases)
+                        map? (map (comp try-int :PAT_NR) cases)
+                        integer? cases))]
     ; 8.5 minutes vs 7.3 for concat below!
     ; 5.6 when matching on int, might need to reconfirm
     #_(apply concat
