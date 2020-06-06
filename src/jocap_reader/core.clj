@@ -241,18 +241,9 @@
         procnums (set (condp #(%1 %2) (first cases)
                         map? (map (comp try-int :PAT_NR) cases)
                         integer? cases))]
-    ; 8.5 minutes vs 7.3 for concat below!
-    ; 5.6 when matching on int, might need to reconfirm
-    #_(apply concat
-        (for [[table-key file] files
-              :let [table (open-dbf file)]]
-          (remove nil?
-            (pmap (fn [{:keys [PAT_NR] :as row}]
-                    (if (contains? procnums PAT_NR) [table-key row]))
-                  (dbf-row-seq table)))))
-    (concat
-      (for [[table-key file] files
-            :let [table (open-dbf file)]
-            {:keys [PAT_NR] :as row} (dbf-row-seq table)
-            :when (contains? procnums (try-int PAT_NR))]
-        [table-key row]))))
+    (for [[table-key file] files
+          :let [table (open-dbf file)]]
+      [table-key
+       (for [{:keys [PAT_NR] :as row} (dbf-row-seq table)
+             :when (contains? procnums (try-int PAT_NR))]
+         row)])))
