@@ -237,7 +237,7 @@
   ; Probably no benefit from scanning multiple dbfs at once? Could determine empirically?
   ; Relies on completed dbf-row-seq closing its file.
   [path cases]
-  (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :TRACK))
+  (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :PATGG :TRACK))
         procnums (set (condp #(%1 %2) (first cases)
                         map? (map (comp try-int :PAT_NR) cases)
                         integer? cases))]
