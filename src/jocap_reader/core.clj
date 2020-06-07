@@ -232,21 +232,18 @@
            (filter (apply case-filter conditions))))
 
 (defn extract
-  "Lazily load rows from all tables pertaining to cases (A_PAT rows or int procnums) at path.
-   Transform table and field keys from keywords using `extract-namer`."
+  "Lazily load rows from all tables pertaining to cases (A_PAT rows or int procnums) at path."
   ; Unfortunately javadbf can't read CDX index files and I'm not going to implement it.
   ; Probably no benefit from scanning multiple dbfs at once? Could determine empirically?
   ; Relies on completed dbf-row-seq closing its file.
-  ([path cases] (extract path namer cases))
-  ([path extract-namer cases]
-   (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :PATGG :TRACK))
-         procnums (set (condp #(%1 %2) (first cases)
-                         map? (map (comp try-int :PAT_NR) cases)
-                         integer? cases))]
-     (for [[table-key file] files
-           :let [table (open-dbf file)]]
-       [(extract-namer table-key)
-        (for [{:keys [PAT_NR] :as row} (dbf-row-seq table)
-              :when (contains? procnums (try-int PAT_NR))]
-          ; Bit inelegant to transform keys here rather than in dbf-row-seq, but don't optimise unless slow.
-          (into {} (for [[k v] row] [(extract-namer k) v])))]))))
+  [path cases]
+  (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :PATGG :TRACK))
+        procnums (set (condp #(%1 %2) (first cases)
+                        map? (map (comp try-int :PAT_NR) cases)
+                        integer? cases))]
+    (for [[table-key file] files
+          :let [table (open-dbf file)]]
+      [table-key
+       (for [{:keys [PAT_NR] :as row} (dbf-row-seq table)
+             :when (contains? procnums (try-int PAT_NR))]
+         row)])))
