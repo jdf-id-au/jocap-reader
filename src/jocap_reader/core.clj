@@ -1,7 +1,7 @@
 (ns jocap-reader.core
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [tick.core :as t]
+            [tick.alpha.api :as t]
             [clojure.string :as s]
             [comfort.io :as c]
             [clj-fuzzy.levenshtein :as lev]
@@ -238,7 +238,7 @@
   ; Relies on completed dbf-row-seq closing its file.
   [path cases]
   (let [files (select-keys (c/ext "dbf" namer path) (disj target-tables :PATGG :TRACK))
-        procnums (set (condp #(%1 %2) (first cases)
+        procnums (set (condp apply [(first cases)]
                         map? (map (comp try-int :PAT_NR) cases)
                         integer? cases))]
     (for [[table-key file] files
