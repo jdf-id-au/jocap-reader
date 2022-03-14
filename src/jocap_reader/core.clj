@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [tick.core :as t]
             [clojure.string :as s]
-            [comfort.core :as c]
+            [comfort.io :as c]
             [clj-fuzzy.levenshtein :as lev]
             [clojure.core.match :refer [match]])
   (:import (com.linuxense.javadbf DBFDataType DBFReader)
@@ -54,7 +54,7 @@
   "Display schema for table +- field."
   ([table] (define table nil))
   ([table field] (merge {:table (-> (get schema table) meta :title)}
-                        (if field {:field (get-in schema [table field])}))))
+                        (when field {:field (get-in schema [table field])}))))
 
 (defn fields
   "List field names and English definitions."
@@ -128,7 +128,7 @@
         stem (namer (subs name 0 (s/last-index-of name \.)))
         fpt (->> file .getCanonicalFile .getParent (c/ext "fpt" namer) stem)
         r (DBFReader. (io/input-stream file))]
-    (if fpt (.setMemoFile r fpt))
+    (when fpt (.setMemoFile r fpt))
     r))
 
 (defn open-table
@@ -140,7 +140,7 @@
 (defn unless-nulls
   "Return memo as string unless it's all nulls."
   [memo]
-  (if-not (every? (comp zero? int) memo) memo))
+  (when-not (every? (comp zero? int) memo) memo))
 
 (defn dbf-row-seq
   "Lazy-load whole table. Make DATE and TIMESTAMP local."

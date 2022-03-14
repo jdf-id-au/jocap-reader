@@ -4,3 +4,6 @@
 .idea/dataSources*
 jocap-reader.iml
 .nrepl-port
+.clj-kondo/
+.cpcache/
+.lsp/
