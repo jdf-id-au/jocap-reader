@@ -1,7 +1,7 @@
 (ns jocap-reader.core
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [tick.alpha.api :as t]
+            [tick.core :as t]
             [clojure.string :as s]
             [comfort.io :as c]
             [clj-fuzzy.levenshtein :as lev]
