@@ -1,13 +1,13 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.10.3"}
         org.clojure/core.match {:mvn/version "1.0.0"}
-        com.github.albfernandez/javadbf {:mvn/version "1.13.2"}
+        com.github.albfernandez/javadbf {:mvn/version "1.14.0"}
         jdf/comfort #_{:git/url "https://github.com/jdf-id-au/comfort.git"
                        :sha "4b2db894dae39f4e2dee3f6e7ebf96340e9b6deb"}
                       {:local/root "../../lib/comfort"}
-        tick/tick
+        tick/tick {:mvn/version "0.5.0"}
         #_{:mvn/version "0.4.31-alpha"}
-        {:git/url "https://github.com/juxt/tick.git"
+        #_{:git/url "https://github.com/juxt/tick.git"
          :sha "6e88746805acc66c00eacb9a2ba0ff7e95391ad7"}
         clj-fuzzy/clj-fuzzy {:mvn/version "0.4.1"}}
  :aliases

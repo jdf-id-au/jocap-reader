@@ -113,13 +113,13 @@
     https://support.office.com/en-us/article/set-the-field-size-ba65e5a7-2e6f-4737-8e72-36b93f966a33
     https://support.office.com/en-us/article/data-types-for-access-desktop-databases-df2b83ba-cef6-436d-b679-3418f622e482
    "
-  {DBFDataType/NUMERIC Types/DOUBLE
-   DBFDataType/CHARACTER Types/VARCHAR
-   DBFDataType/DATE Types/DATE
-   DBFDataType/TIMESTAMP Types/TIMESTAMP ; ref doesn't cover DBF ODBC for TIMESTAMP
-   DBFDataType/MEMO Types/LONGVARCHAR
-   DBFDataType/LOGICAL Types/BIT
-   DBFDataType/LONG Types/INTEGER}) ; ref doesn't cover DBF ODBC for LONG
+  {DBFDataType/NUMERIC Types/DOUBLE ; natively BigDecimal...
+   DBFDataType/CHARACTER Types/VARCHAR ; String
+   DBFDataType/DATE Types/DATE ; java.util.Date
+   DBFDataType/TIMESTAMP Types/TIMESTAMP ; java.util.Date; ref doesn't cover DBF ODBC for TIMESTAMP
+   DBFDataType/MEMO Types/LONGVARCHAR ; String or byte[]
+   DBFDataType/LOGICAL Types/BIT ; Boolean
+   DBFDataType/LONG Types/INTEGER}) ; Integer; ref doesn't cover DBF ODBC for LONG
 
 (defn open-dbf
   "Opens dbf file and associated fpt (which contains MEMO data) if it exists."
