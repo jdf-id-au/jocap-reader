@@ -1,7 +1,4 @@
-.idea/workspace.xml
-.idea/$CACHE_FILE$
-.idea/libraries/
-.idea/dataSources*
+.idea/
 jocap-reader.iml
 .nrepl-port
 .clj-kondo/
