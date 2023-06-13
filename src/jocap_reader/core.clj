@@ -49,6 +49,10 @@
                     (meta rows))]))))
 
 (def schema (-> "jocap-schema.edn" io/resource slurp edn/read-string sorted-schema))
+(def empirical-schema
+  ;; (into (array-map) ...) seemed not to preserve ordery for field -> type
+  (into (sorted-map) (-> "empirical-schema.edn" io/resource slurp edn/read-string)))
+
 
 (defn define
   "Display schema for table +- field."

@@ -47,6 +47,15 @@
                         coltype (.getType field)]]
               [(keyword colname) {:type (get j/types coltype)}]))))
 
+(comment ; empirical-schema.edn was prepared without java.sql.Types lookup
+  (into (sorted-map)
+    (for [t j/target-tables]
+      (with-open [dbfr (j/open-table "directory with dbfs" t)]
+        [t (into []
+             (for [f (map #(.getField dbfr %) (range (.getFieldCount dbfr)))]
+               [(-> f .getName keyword) (-> f .getType str keyword )]))])))
+  )
+
 #_ (def data-root "")
 
 #_ (def tables (c/ext "dbf" j/namer data-root))
