@@ -146,8 +146,8 @@
   [memo]
   (when-not (every? (comp zero? int) memo) memo))
 
-(defn dbf-row-seq
-  "Lazy-load whole table. Make DATE and TIMESTAMP local."
+(defn make-row-interpreter
+  "Caller's responsibility to close reader."
   [^DBFReader dbfr]
   (let [fields (map #(.getField dbfr %) (range (.getFieldCount dbfr)))
         names (map #(keyword (.getName %)) fields)
@@ -157,10 +157,15 @@
                                         DBFDataType/MEMO unless-nulls
                                         ;DBFDataType/TIMESTAMP_DBASE7 t/date-time
                                         identity))
-                          fields)
-        interpret (fn [row] (into {} (for [[name interpret column]
-                                           (map vector names interpreters row)]
-                                       [name (some-> column interpret)])))
+                       fields)]
+    (fn [row] (into {} (for [[name interpret column]
+                             (map vector names interpreters row)]
+                         [name (some-> column interpret)])))))
+
+(defn dbf-row-seq
+  "Lazy-load whole table. Make DATE and TIMESTAMP local."
+  [^DBFReader dbfr]
+  (let [interpret (make-row-interpreter dbfr)
         extract (fn continue [reader]
                   (lazy-seq (if-let [row (.nextRecord reader)]
                               (cons (interpret row) (continue reader))
